@@ -1,0 +1,210 @@
+<details> <summary>Clique para ver o código do index.html</summary>
+
+HTML
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic Design Planner — Advanced Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fcfcfd; color: #1e293b; letter-spacing: -0.01em; }
+        .input-minimal { background-color: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease; }
+        .input-minimal:focus { background-color: #fff; border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.05); outline: none; }
+        .task-card { border: 1px solid #f1f5f9; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: #fff; }
+        .task-card:hover { border-color: #6366f1; transform: translateY(-2px); box-shadow: 0 12px 24px -10px rgba(0,0,0,0.05); }
+        .chart-container { position: relative; width: 100%; height: 200px; }
+        .btn-primary { transition: all 0.3s ease; background: #1e293b; }
+        .btn-primary:hover { background: #000; transform: translateY(-1px); }
+        .shimmer { background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .label-atomic { font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+        .goal-box { background: linear-gradient(to right, #f8fafc, #ffffff); border-left: 3px solid #6366f1; }
+        .phase-stat-dot { width: 6px; height: 6px; border-radius: 99px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-700">
+
+    <nav class="h-14 border-b border-slate-100 bg-white/80 sticky top-0 z-50 backdrop-blur-md flex items-center px-6 justify-between">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-6 bg-indigo-600 rounded-full"></div>
+            <span class="font-bold text-sm tracking-tight">AtomicPlanner <span class="text-slate-400 font-medium">IA</span></span>
+        </div>
+        <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <div id="statusDot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+            <span id="statusText">Sistema Online</span>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 p-6 lg:p-12">
+        <aside class="lg:col-span-4 space-y-8">
+            <section class="space-y-6">
+                <div>
+                    <h2 class="label-atomic text-slate-400 mb-6">Setup do Desafio</h2>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="label-atomic text-slate-500 block mb-2">Qual o contexto do projeto?</label>
+                            <textarea id="projectContext" rows="4" class="w-full p-4 text-sm input-minimal rounded-2xl resize-none" 
+                            placeholder="Ex: Refatorar o fluxo de doação de um santuário animal vegano..."></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="label-atomic text-slate-500 block mb-2">Janela (Dias)</label>
+                                <input type="number" id="deadline" value="10" class="w-full p-3 text-sm input-minimal rounded-xl">
+                            </div>
+                            <div>
+                                <label class="label-atomic text-slate-500 block mb-2">Senioridade</label>
+                                <select id="seniority" class="w-full p-3 text-sm input-minimal rounded-xl appearance-none bg-no-repeat bg-right pr-8">
+                                    <option value="junior">Junior</option>
+                                    <option value="pleno" selected>Pleno</option>
+                                    <option value="senior">Senior</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="generateBtn" onclick="generatePlan()" class="w-full py-4 btn-primary text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 mt-2 active:scale-[0.98] transition-transform">
+                            <span>Gerar Backlog Analítico</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="vizSection" class="opacity-10 transition-all duration-700 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h3 class="label-atomic text-slate-400 mb-6 text-center">Balanço do Processo</h3>
+                <div class="chart-container mb-6"><canvas id="effortChart"></canvas></div>
+                <div id="phaseStatsContainer" class="space-y-3">
+                    <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 border-b border-slate-50 pb-2">
+                        <div class="flex items-center gap-2"><div class="phase-stat-dot bg-emerald-500"></div><span>Discover</span></div>
+                        <span id="stat-discover">0 tarefas (0d)</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 border-b border-slate-50 pb-2">
+                        <div class="flex items-center gap-2"><div class="phase-stat-dot bg-blue-500"></div><span>Define</span></div>
+                        <span id="stat-define">0 tarefas (0d)</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 border-b border-slate-50 pb-2">
+                        <div class="flex items-center gap-2"><div class="phase-stat-dot bg-amber-500"></div><span>Develop</span></div>
+                        <span id="stat-develop">0 tarefas (0d)</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                        <div class="flex items-center gap-2"><div class="phase-stat-dot bg-rose-500"></div><span>Deliver</span></div>
+                        <span id="stat-deliver">0 tarefas (0d)</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <section class="lg:col-span-8">
+            <div id="emptyState" class="h-full flex flex-col items-center justify-center py-20 text-center border border-slate-100 rounded-[2.5rem] bg-slate-50/20">
+                <div class="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6 text-xl">💡</div>
+                <h3 class="text-lg font-bold text-slate-900">Aguardando briefing</h3>
+                <p class="text-sm text-slate-400 mt-2 max-w-xs mx-auto">Insira o desafio para gerar o plano.</p>
+            </div>
+            <div id="loadingState" class="hidden space-y-6">
+                <div class="h-8 w-40 shimmer rounded-lg"></div>
+                <div class="space-y-4">
+                    <div class="h-24 w-full shimmer rounded-3xl"></div>
+                    <div class="h-32 w-full shimmer rounded-3xl"></div>
+                </div>
+            </div>
+            <div id="planContent" class="hidden space-y-8 animate-in fade-in duration-500">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-8">
+                    <div>
+                        <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-[0.2em] mb-2 block">PLANO CALCULADO</span>
+                        <h2 class="text-3xl font-extrabold text-slate-900 leading-tight">UX Task Backlog</h2>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="px-4 py-2 bg-slate-50 rounded-xl text-center min-w-[90px]"><span id="totalTasksCount" class="block text-xs font-bold text-slate-900">0</span><span class="label-atomic text-slate-400">Tarefas</span></div>
+                        <div class="px-4 py-2 bg-indigo-50 rounded-xl text-center min-w-[90px]"><span id="totalPointsSum" class="block text-xs font-bold text-indigo-600">0</span><span class="label-atomic text-indigo-400">Dias</span></div>
+                    </div>
+                </div>
+                <div id="goalContainer" class="goal-box p-6 rounded-2xl shadow-sm"><h3 class="label-atomic text-slate-400 mb-2">Objetivo Simplificado</h3><p id="simplifiedGoalText" class="text-sm font-medium text-slate-700 leading-relaxed">...</p></div>
+                <div id="taskGrid" class="space-y-4 custom-scrollbar"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let chartInstance = null;
+        async function generatePlan() {
+            const context = document.getElementById('projectContext').value;
+            const deadline = parseFloat(document.getElementById('deadline').value);
+            const seniority = document.getElementById('seniority').value;
+            if (!context || context.length < 5) { alert("Descreva melhor o contexto."); return; }
+            
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('planContent').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('statusDot').className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse";
+
+            const systemPrompt = `Gere um backlog de design UX em JSON baseado no Double Diamond. Máximo 2 dias por tarefa. Total de dias: ${deadline}.`;
+            const userQuery = `Contexto: ${context}. Senioridade: ${seniority}.`;
+
+            try {
+                const response = await callGemini(systemPrompt, userQuery);
+                const plan = JSON.parse(response);
+                renderPlan(plan);
+            } catch (error) {
+                alert("Erro ao conectar com a IA.");
+                console.error(error);
+            } finally {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('statusDot').className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
+            }
+        }
+
+        async function callGemini(systemPrompt, userQuery) {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ systemPrompt, userQuery })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            return data.text;
+        }
+
+        function renderPlan(plan) {
+            const container = document.getElementById('taskGrid');
+            container.innerHTML = '';
+            document.getElementById('planContent').classList.remove('hidden');
+            document.getElementById('vizSection').style.opacity = "1";
+            document.getElementById('simplifiedGoalText').innerText = plan.simplifiedGoal;
+            let totalPts = 0;
+            const dist = { Discover: { tasks: 0, days: 0 }, Define: { tasks: 0, days: 0 }, Develop: { tasks: 0, days: 0 }, Deliver: { tasks: 0, days: 0 } };
+
+            plan.tasks.forEach(task => {
+                totalPts += task.points;
+                const phase = task.phase;
+                if (dist[phase]) { dist[phase].tasks++; dist[phase].days += task.points; }
+                const color = { Discover: 'bg-emerald-50 text-emerald-500', Define: 'bg-blue-50 text-blue-500', Develop: 'bg-amber-50 text-amber-500', Deliver: 'bg-rose-50 text-rose-500' }[phase];
+                container.insertAdjacentHTML('beforeend', `<div class="task-card p-6 rounded-[2rem] shadow-sm"><span class="px-2 py-1 rounded-full text-[9px] font-black ${color}">${phase}</span><h4 class="font-bold mt-2">${task.title}</h4><p class="text-xs text-slate-500 mt-1">${task.description}</p></div>`);
+            });
+            document.getElementById('totalTasksCount').innerText = plan.tasks.length;
+            document.getElementById('totalPointsSum').innerText = totalPts.toFixed(1);
+            updateChart(dist);
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('effortChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Discover', 'Define', 'Develop', 'Deliver'],
+                    datasets: [{ data: [data.Discover.days, data.Define.days, data.Develop.days, data.Deliver.days], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.05)' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { r: { ticks: { display: false } } } }
+            });
+        }
+    </script>
+</body>
+</html>
+</details>
